@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Generador de Cuentos</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f3ff;color:#1a1a2e;min-height:100vh}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.lcard{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(108,71,217,.12);padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center}
+.lcard h1{font-size:22px;margin:1rem 0 .5rem}
+.lcard p{color:#6b7280;font-size:15px;margin-bottom:2rem}
+.btn-google{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-google img{width:20px}
+header{display:none;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 1.25rem;height:56px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99}
+.logo{font-size:17px;font-weight:700;color:#6c47d9}
+.uarea{display:flex;align-items:center;gap:10px}
+.uav{width:32px;height:32px;border-radius:50%;border:2px solid #6c47d9;object-fit:cover}
+.uname{font-size:13px;font-weight:500}
+.bout{font-size:12px;padding:5px 12px;border-radius:7px;border:1px solid #e5e7eb;background:transparent;color:#6b7280;cursor:pointer}
+#app{display:none;max-width:980px;margin:0 auto;padding:1.5rem;gap:1.5rem;grid-template-columns:360px 1fr}
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(108,71,217,.09);padding:1.6rem}
+.dots{display:flex;gap:6px;margin-bottom:1.4rem}
+.dot{flex:1;height:4px;border-radius:2px;background:#e5e7eb}
+.dot.on{background:#6c47d9}
+input[type=number],textarea{width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:15px;outline:none;font-family:inherit}
+input[type=number]{font-size:22px;font-weight:700;text-align:center}
+textarea{resize:none;height:88px}
+.opt{padding:9px 6px;border:1.5px solid #e5e7eb;border-radius:9px;background:#fff;color:#374151;font-size:13px;font-weight:500;cursor:pointer;text-align:center;width:100%}
+.opt.sel{border-color:#6c47d9;background:#f0eaff;color:#6c47d9}
+.lbtn{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border:1.5px solid #e5e7eb;border-radius:9px;background:#fff;font-size:12px;font-weight:500;cursor:pointer;width:100%}
+.lbtn.sel{border-color:#6c47d9;background:#f0eaff;color:#6c47d9}
+.sbtn{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;margin-bottom:7px;text-align:left;width:100%}
+.sbtn.sel{border-color:#6c47d9;background:#f0eaff}
+.brow{display:flex;gap:9px;margin-top:1.2rem}
+.bback{padding:11px 15px;border:1.5px solid #e5e7eb;border-radius:9px;background:transparent;color:#6b7280;font-size:13px;cursor:pointer}
+.bnext{flex:1;padding:12px;border:none;border-radius:9px;background:#6c47d9;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:42px;height:42px;border:4px solid #e5e7eb;border-top-color:#6c47d9;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
+.sc{border:1px solid #e5e7eb;border-radius:10px;padding:.85rem;cursor:pointer;margin-bottom:8px}
+.sc.act{border-color:#6c47d9}
+.vbody{background:#fef3c7;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:1.25rem;font-size:15px;line-height:1.9;white-space:pre-wrap;font-family:Georgia,serif}
+.ttswrap{margin-top:1rem;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;font-size:13px}
+.tts-hdr{background:#f0fdf4;border-bottom:1px solid #e5e7eb;padding:9px 14px;font-weight:600;color:#16a34a;font-size:12px}
+.tts-body{padding:1rem;display:flex;flex-direction:column;gap:10px}
+.trow{display:flex;align-items:center;gap:8px}
+.tsel{flex:1;padding:6px 8px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;outline:none}
+.ubox{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem}
+.ubar-bg{height:5px;background:#e5e7eb;border-radius:3px;margin:7px 0;overflow:hidden}
+.ubar{height:100%;border-radius:3px}
+.ustats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;text-align:center}
+.ustat{background:#fff;border-radius:7px;padding:5px 3px;border:1px solid #e5e7eb}
+.crow{display:flex;gap:8px;align-items:center}
+.bplay{flex:1;padding:10px;border:none;border-radius:9px;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.bstop{padding:10px 14px;border:1px solid #e5e7eb;border-radius:9px;background:#f8fafc;color:#374151;font-size:13px;cursor:pointer}
+@media(max-width:680px){#app{grid-template-columns:1fr}#viewer{display:none!important}}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="lcard">
+    <div style="font-size:48px">&#127769;</div>
+    <h1>Generador de Cuentos</h1>
+    <p>Crea cuentos personalizados y guardalos para siempre</p>
+    <button class="btn-google" id="btn-login">
+      <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G"/>
+      Continuar con Google
+    </button>
+  </div>
+</div>
+
+<header id="hdr">
+  <span class="logo">&#127769; Cuentos</span>
+  <div class="uarea">
+    <img class="uav" id="uav" src="" alt=""/>
+    <span class="uname" id="uname"></span>
+    <button class="bout" id="btn-out">Salir</button>
+  </div>
+</header>
+
+<div id="app">
+  <div class="card" id="wizard"></div>
+  <div style="display:flex;flex-direction:column;gap:1.25rem">
+    <div class="card">
+      <p style="font-size:16px;font-weight:600;margin-bottom:1rem">Mis cuentos <span id="story-count" style="font-size:13px;font-weight:400;color:#9ca3af"></span></p>
+      <div id="story-list"><div style="text-align:center;padding:2rem;color:#9ca3af;font-size:14px">Aun no tienes cuentos.</div></div>
+    </div>
+    <div class="card" id="viewer" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+var FIREBASE_CONFIG = {
+  apiKey: "TU_FIREBASE_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO_ID",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+var ANTHROPIC_KEY = "TU_CLAVE_ANTHROPIC";
+var GOOGLE_TTS_KEY = "TU_GOOGLE_TTS_KEY";
+
+firebase.initializeApp(FIREBASE_CONFIG);
+var auth = firebase.auth();
+var db = firebase.firestore();
+
+var IDIOMAS = [
+  {c:"es",l:"Espanol",f:"ES"},{c:"ca",l:"Catala",f:"CA"},
+  {c:"en",l:"English",f:"EN"},{c:"fr",l:"Francais",f:"FR"},
+  {c:"de",l:"Deutsch",f:"DE"},{c:"it",l:"Italiano",f:"IT"},
+  {c:"pt",l:"Portugues",f:"PT"},{c:"nl",l:"Nederlands",f:"NL"},
+  {c:"pl",l:"Polski",f:"PL"},{c:"ja",l:"Japones",f:"JA"},
+  {c:"zh",l:"Chino",f:"ZH"},{c:"ar",l:"Arabe",f:"AR"}
+];
+
+var INTERESES = {
+  es:["Animales","Espacio","Oceano","Dinosaurios","Magia","Deporte","Musica","Arte","Naturaleza","Superheroes","Vehiculos","Cocina","Ciencia"],
+  en:["Animals","Space","Ocean","Dinosaurs","Magic","Sports","Music","Art","Nature","Superheroes","Vehicles","Cooking","Science"],
+  fr:["Animaux","Espace","Ocean","Dinosaures","Magie","Sport","Musique","Art","Nature","Super-heros","Vehicules","Cuisine","Science"],
+  de:["Tiere","Weltraum","Ozean","Dinosaurier","Magie","Sport","Musik","Kunst","Natur","Superhelden","Fahrzeuge","Kochen","Wissenschaft"],
+  it:["Animali","Spazio","Oceano","Dinosauri","Magia","Sport","Musica","Arte","Natura","Supereroi","Veicoli","Cucina","Scienza"],
+  pt:["Animais","Espaco","Oceano","Dinossauros","Magia","Desporto","Musica","Arte","Natureza","Super-herois","Veiculos","Culinaria","Ciencia"],
+  nl:["Dieren","Ruimte","Oceaan","Dinosaurussen","Magie","Sport","Muziek","Kunst","Natuur","Superhelden","Voertuigen","Koken","Wetenschap"],
+  pl:["Zwierzeta","Kosmos","Ocean","Dinozaury","Magia","Sport","Muzyka","Sztuka","Natura","Superbohaterowie","Pojazdy","Gotowanie","Nauka"],
+  ca:["Animals","Espai","Ocea","Dinosaures","Magia","Esport","Musica","Art","Natura","Superherois","Vehicles","Cuina","Ciencia"],
+  ja:["Animales","Espacio","Mar","Dinosaurios","Magia","Deporte","Musica","Arte","Naturaleza","Heroes","Vehiculos","Cocina","Ciencia"],
+  zh:["Animales","Espacio","Mar","Dinosaurios","Magia","Deporte","Musica","Arte","Naturaleza","Heroes","Vehiculos","Cocina","Ciencia"],
+  ar:["Animales","Espacio","Mar","Dinosaurios","Magia","Deporte","Musica","Arte","Naturaleza","Heroes","Vehiculos","Cocina","Ciencia"]
+};
+
+var ESTILOS = {
+  es:[{v:"divertido",l:"Divertido",d:"Risas"},{v:"aventurero",l:"Aventurero",d:"Misiones"},{v:"tranquilo",l:"Tranquilo",d:"Calmante"},{v:"magico",l:"Magico",d:"Fantasia"},{v:"educativo",l:"Educativo",d:"Conocimiento"}],
+  en:[{v:"funny",l:"Funny",d:"Laughs"},{v:"adventurous",l:"Adventurous",d:"Quests"},{v:"gentle",l:"Gentle",d:"Calming"},{v:"magical",l:"Magical",d:"Fantasy"},{v:"educational",l:"Educational",d:"Facts"}],
+  fr:[{v:"drole",l:"Drole",d:"Rires"},{v:"aventureux",l:"Aventureux",d:"Quetes"},{v:"calme",l:"Calme",d:"Apaisant"},{v:"magique",l:"Magique",d:"Fantaisie"},{v:"educatif",l:"Educatif",d:"Savoirs"}],
+  de:[{v:"lustig",l:"Lustig",d:"Lachen"},{v:"abenteuer",l:"Abenteuer",d:"Spannung"},{v:"ruhig",l:"Ruhig",d:"Beruhigend"},{v:"magisch",l:"Magisch",d:"Fantasy"},{v:"lehrreich",l:"Lehrreich",d:"Wissen"}]
+};
+
+var GOOGLE_VOICES = [
+  {region:"Chile",    name:"es-US-Neural2-A",lc:"es-US",label:"Valentina (F)"},
+  {region:"Chile",    name:"es-US-Neural2-B",lc:"es-US",label:"Mateo (M)"},
+  {region:"Argentina",name:"es-US-Neural2-C",lc:"es-US",label:"Elena (F)"},
+  {region:"Argentina",name:"es-US-Neural2-D",lc:"es-US",label:"Tomas (M)"},
+  {region:"Mexico",   name:"es-US-Wavenet-A",lc:"es-US",label:"Sofia (F)"},
+  {region:"Mexico",   name:"es-US-Wavenet-B",lc:"es-US",label:"Diego (M)"},
+  {region:"Espana",   name:"es-ES-Neural2-A",lc:"es-ES",label:"Carmen (F)"},
+  {region:"Espana",   name:"es-ES-Neural2-B",lc:"es-ES",label:"Carlos (M)"},
+  {region:"UK",       name:"en-GB-Neural2-A",lc:"en-GB",label:"Emma (F)"},
+  {region:"US",       name:"en-US-Neural2-C",lc:"en-US",label:"Aria (F)"},
+  {region:"Francia",  name:"fr-FR-Neural2-A",lc:"fr-FR",label:"Claire (F)"},
+  {region:"Alemania", name:"de-DE-Neural2-A",lc:"de-DE",label:"Lena (F)"},
+  {region:"Italia",   name:"it-IT-Neural2-A",lc:"it-IT",label:"Giulia (F)"},
+  {region:"Brasil",   name:"pt-BR-Neural2-A",lc:"pt-BR",label:"Ana (F)"},
+  {region:"Japon",    name:"ja-JP-Neural2-B",lc:"ja-JP",label:"Yuki (F)"},
+  {region:"China",    name:"cmn-CN-Neural2-A",lc:"cmn-CN",label:"Mei (F)"}
+];
+
+function getMonth(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1);}
+function loadUsage(){try{var d=JSON.parse(localStorage.getItem("cu_usage")||"{}");return d.month===getMonth()?d:{month:getMonth(),google:0};}catch(e){return {month:getMonth(),google:0};}}
+function saveUsage(u){try{localStorage.setItem("cu_usage",JSON.stringify(u));}catch(e){}}
+
+var currentUser=null, stories=[], activeId=null;
+var uiLang="es", step=0, age="", gender="", interests=[], storyStyle="", lesson="";
+var audioEl=null, ttsStatus="idle", selVoice="es-US-Neural2-A";
+var usage=loadUsage();
+
+document.getElementById("btn-login").onclick=function(){
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){alert(e.message);});
+};
+document.getElementById("btn-out").onclick=function(){auth.signOut();};
+
+auth.onAuthStateChanged(function(u){
+  currentUser=u;
+  if(u){
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("hdr").style.display="flex";
+    document.getElementById("app").style.display="grid";
+    document.getElementById("uav").src=u.photoURL||"";
+    document.getElementById("uname").textContent=u.displayName||u.email;
+    loadStories();
+    renderWizard();
+  } else {
+    document.getElementById("login-screen").style.display="flex";
+    document.getElementById("hdr").style.display="none";
+    document.getElementById("app").style.display="none";
+  }
+});
+
+function loadStories(){
+  db.collection("users").doc(currentUser.uid).collection("stories").orderBy("createdAt","desc").get().then(function(snap){
+    stories=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    renderLibrary();
+  });
+}
+
+function saveStory(text){
+  return db.collection("users").doc(currentUser.uid).collection("stories").add({
+    title: gender+", "+age+" - "+interests[0],
+    text: text,
+    meta: age+" anos - "+gender+" - "+storyStyle+" - "+lesson,
+    lang: uiLang,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){return loadStories();});
+}
+
+function deleteStory(id){
+  if(!confirm("Eliminar este cuento?"))return;
+  db.collection("users").doc(currentUser.uid).collection("stories").doc(id).delete().then(function(){
+    if(activeId===id){activeId=null;document.getElementById("viewer").style.display="none";}
+    loadStories();
+  });
+}
+
+function renderLibrary(){
+  var list=document.getElementById("story-list");
+  document.getElementById("story-count").textContent="("+stories.length+")";
+  if(!stories.length){list.innerHTML='<div style="text-align:center;padding:2rem;color:#9ca3af;font-size:14px">Aun no tienes cuentos.</div>';return;}
+  var html="";
+  for(var i=0;i<stories.length;i++){
+    var s=stories[i];
+    html+='<div class="sc'+(s.id===activeId?" act":"")+'" onclick="showStory(\''+s.id+'\')">';
+    html+='<div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.title+'</div>';
+    html+='<div style="font-size:11px;color:#9ca3af;margin-top:3px">'+(s.meta||"")+'</div>';
+    html+='<div style="font-size:12px;color:#6b7280;margin-top:5px;overflow:hidden">'+(s.text||"").substring(0,100)+'...</div>';
+    html+='</div>';
+  }
+  list.innerHTML=html;
+}
+
+function showStory(id){
+  activeId=id; renderLibrary();
+  var s=null;
+  for(var i=0;i<stories.length;i++){if(stories[i].id===id){s=stories[i];break;}}
+  if(!s)return;
+  stopTTS();
+  var lang=s.lang||"es";
+  var voices=[];
+  for(var i=0;i<GOOGLE_VOICES.length;i++){if(GOOGLE_VOICES[i].lc.indexOf(lang)===0)voices.push(GOOGLE_VOICES[i]);}
+  if(!voices.length)voices=GOOGLE_VOICES.slice(0,8);
+  var found=false;
+  for(var i=0;i<voices.length;i++){if(voices[i].name===selVoice){found=true;break;}}
+  if(!found)selVoice=voices[0].name;
+  var lim=100000, used=usage.google||0, rem=Math.max(0,lim-used);
+  var pct=Math.min(100,Math.round((used/lim)*100));
+  var bc=pct>85?"#dc2626":pct>60?"#f59e0b":"#22c55e";
+  var fits=s.text.length<=rem;
+  var opts="";
+  for(var i=0;i<voices.length;i++){opts+='<option value="'+voices[i].name+'"'+(voices[i].name===selVoice?" selected":"")+'>'+voices[i].region+' - '+voices[i].label+'</option>';}
+  var v=document.getElementById("viewer");
+  v.style.display="block";
+  v.innerHTML=
+    '<p style="font-size:18px;font-weight:700;margin-bottom:4px">'+s.title+'</p>'+
+    '<p style="font-size:12px;color:#6b7280;margin-bottom:1rem">'+(s.meta||"")+'</p>'+
+    '<div class="vbody">'+(s.text||"")+'</div>'+
+    '<div class="ttswrap">'+
+      '<div class="tts-hdr">Google TTS - Voces con acento</div>'+
+      '<div class="tts-body">'+
+        '<div class="trow"><span style="font-size:12px;color:#6b7280;min-width:32px">Voz</span>'+
+        '<select class="tsel" id="voice-sel" onchange="selVoice=this.value">'+opts+'</select></div>'+
+        '<div class="ubox">'+
+          '<div style="display:flex;justify-content:space-between"><span style="font-weight:600;color:#16a34a;font-size:12px">Google TTS</span><span style="font-size:10px;color:#9ca3af">Reinicia dia 1</span></div>'+
+          '<div class="ubar-bg"><div class="ubar" style="width:'+pct+'%;background:'+bc+'"></div></div>'+
+          '<div class="ustats">'+
+            '<div class="ustat"><div style="color:#9ca3af;font-size:10px">Usado</div><div style="font-weight:700;color:#6b7280;font-size:12px">'+used.toLocaleString()+'</div></div>'+
+            '<div class="ustat"><div style="color:#9ca3af;font-size:10px">Restante</div><div style="font-weight:700;color:'+(rem<5000?"#dc2626":"#16a34a")+';font-size:12px">'+rem.toLocaleString()+'</div></div>'+
+            '<div class="ustat"><div style="color:#9ca3af;font-size:10px">Limite</div><div style="font-weight:700;color:#6b7280;font-size:12px">'+lim.toLocaleString()+'</div></div>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;margin-top:7px;font-size:11px">'+
+            '<span style="color:#6b7280">Este cuento: <b>'+s.text.length+'</b> chars</span>'+
+            '<span style="font-weight:600;color:'+(fits?"#16a34a":"#dc2626")+'">'+(fits?"Cabe":"Sin saldo")+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="crow" id="tts-ctrl">'+
+          '<button class="bplay" style="background:#16a34a" onclick="playTTS()">Reproducir</button>'+
+          '<button class="bstop" onclick="stopTTS()" disabled>Detener</button>'+
+        '</div>'+
+        '<div id="tts-msg" style="font-size:11px;color:#16a34a;font-weight:600;min-height:16px;margin-top:4px"></div>'+
+      '</div>'+
+    '</div>'+
+    '<button onclick="deleteStory(\''+s.id+'\')" style="margin-top:.9rem;padding:8px 15px;border:1px solid #fca5a5;border-radius:8px;background:#fff5f5;color:#dc2626;font-size:13px;cursor:pointer">Eliminar</button>';
+}
+
+function updateTTSUI(){
+  var ctrl=document.getElementById("tts-ctrl");
+  var msg=document.getElementById("tts-msg");
+  if(!ctrl)return;
+  if(ttsStatus==="loading"){
+    ctrl.innerHTML='<button class="bplay" style="background:#9ca3af;cursor:not-allowed" disabled>Generando...</button><button class="bstop" onclick="stopTTS()">Detener</button>';
+    if(msg)msg.textContent="";
+  } else if(ttsStatus==="playing"){
+    ctrl.innerHTML='<button class="bplay" style="background:#f59e0b" onclick="pauseTTS()">Pausar</button><button class="bstop" onclick="stopTTS()">Detener</button>';
+    if(msg)msg.textContent="Leyendo...";
+  } else if(ttsStatus==="paused"){
+    ctrl.innerHTML='<button class="bplay" style="background:#6c47d9" onclick="resumeTTS()">Reanudar</button><button class="bstop" onclick="stopTTS()">Detener</button>';
+    if(msg)msg.textContent="Pausado";
+  } else {
+    ctrl.innerHTML='<button class="bplay" style="background:#16a34a" onclick="playTTS()">Reproducir</button><button class="bstop" onclick="stopTTS()" disabled>Detener</button>';
+    if(msg)msg.textContent="";
+  }
+}
+
+function stopTTS(){if(audioEl){audioEl.pause();audioEl=null;}ttsStatus="idle";updateTTSUI();}
+function pauseTTS(){if(audioEl)audioEl.pause();ttsStatus="paused";updateTTSUI();}
+function resumeTTS(){if(audioEl){audioEl.play();ttsStatus="playing";updateTTSUI();}}
+
+function playTTS(){
+  var s=null;
+  for(var i=0;i<stories.length;i++){if(stories[i].id===activeId){s=stories[i];break;}}
+  if(!s)return;
+  stopTTS(); ttsStatus="loading"; updateTTSUI();
+  var voz=GOOGLE_VOICES[0];
+  for(var i=0;i<GOOGLE_VOICES.length;i++){if(GOOGLE_VOICES[i].name===selVoice){voz=GOOGLE_VOICES[i];break;}}
+  fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize?key="+GOOGLE_TTS_KEY,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({input:{text:s.text},voice:{languageCode:voz.lc,name:voz.name},audioConfig:{audioEncoding:"MP3",speakingRate:0.9}})
+  }).then(function(res){
+    if(!res.ok)return res.json().then(function(e){throw new Error(e.error?e.error.message:"Error "+res.status);});
+    return res.json();
+  }).then(function(data){
+    if(!data.audioContent)throw new Error("Sin audioContent");
+    var bytes=atob(data.audioContent), arr=new Uint8Array(bytes.length);
+    for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+    audioEl=new Audio(URL.createObjectURL(new Blob([arr],{type:"audio/mpeg"})));
+    audioEl.onended=function(){ttsStatus="idle";updateTTSUI();usage.google=(usage.google||0)+s.text.length;saveUsage(usage);};
+    audioEl.onerror=function(){ttsStatus="idle";updateTTSUI();alert("Error reproduciendo audio.");};
+    audioEl.play(); ttsStatus="playing"; updateTTSUI();
+  }).catch(function(e){ttsStatus="idle";updateTTSUI();alert("Error Google TTS: "+e.message);});
+}
+
+function dots(n){
+  var h='<div class="dots">';
+  for(var i=0;i<5;i++)h+='<div class="dot'+(i<=n?" on":"")+'"></div>';
+  return h+'</div>';
+}
+
+function renderWizard(){
+  var el=document.getElementById("wizard");
+  var inter=INTERESES[uiLang]||INTERESES.en;
+  var estilos=ESTILOS[uiLang]||ESTILOS.en;
+  var html="";
+  if(step===0){
+    html+='<div style="margin-bottom:1.2rem"><p style="font-size:14px;font-weight:600;margin-bottom:8px">Idioma</p>';
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">';
+    for(var i=0;i<IDIOMAS.length;i++){
+      html+='<button class="lbtn'+(uiLang===IDIOMAS[i].c?" sel":"")+'" onclick="setLang(\''+IDIOMAS[i].c+'\')">'+IDIOMAS[i].f+' '+IDIOMAS[i].l+'</button>';
+    }
+    html+='</div></div>'+dots(0);
+    html+='<p style="font-size:16px;font-weight:600;margin-bottom:4px">Que edad?</p>';
+    html+='<p style="font-size:12px;color:#6b7280;margin-bottom:1rem">Ajustamos el vocabulario</p>';
+    html+='<input type="number" min="2" max="12" placeholder="2-12" value="'+age+'" oninput="age=this.value" style="margin-bottom:1rem"/>';
+    html+='<div class="brow"><button class="bnext" onclick="if(age){step=1;renderWizard();}">Continuar</button></div>';
+    el.innerHTML=html; return;
+  }
+  if(step===1){
+    html+=dots(1)+'<p style="font-size:16px;font-weight:600;margin-bottom:4px">Nino o nina?</p><p style="font-size:12px;color:#6b7280;margin-bottom:1rem">Pronombres</p>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem">';
+    var g=["nino","nina","otro"];
+    for(var i=0;i<g.length;i++)html+='<button class="opt'+(gender===g[i]?" sel":"")+'" onclick="gender=\''+g[i]+'\';renderWizard()">'+g[i]+'</button>';
+    html+='</div><div class="brow"><button class="bback" onclick="step=0;renderWizard()">Atras</button><button class="bnext" onclick="if(gender){step=2;renderWizard();}">Continuar</button></div>';
+    el.innerHTML=html; return;
+  }
+  if(step===2){
+    html+=dots(2)+'<p style="font-size:16px;font-weight:600;margin-bottom:4px">Que le encanta?</p><p style="font-size:12px;color:#6b7280;margin-bottom:1rem">Hasta 3 temas</p>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:7px;margin-bottom:1rem">';
+    for(var i=0;i<inter.length;i++)html+='<button class="opt'+(interests.indexOf(inter[i])>=0?" sel":"")+'" onclick="toggleInterest(\''+inter[i]+'\')">'+inter[i]+'</button>';
+    html+='</div><div class="brow"><button class="bback" onclick="step=1;renderWizard()">Atras</button><button class="bnext" onclick="if(interests.length){step=3;renderWizard();}">Continuar</button></div>';
+    el.innerHTML=html; return;
+  }
+  if(step===3){
+    html+=dots(3)+'<p style="font-size:16px;font-weight:600;margin-bottom:4px">Que estilo?</p><p style="font-size:12px;color:#6b7280;margin-bottom:1rem">Tono del cuento</p>';
+    for(var i=0;i<estilos.length;i++){
+      html+='<button class="sbtn'+(storyStyle===estilos[i].v?" sel":"")+'" onclick="storyStyle=\''+estilos[i].v+'\';renderWizard()">';
+      html+='<div><div style="font-size:14px;font-weight:600">'+estilos[i].l+'</div><div style="font-size:12px;color:#6b7280">'+estilos[i].d+'</div></div></button>';
+    }
+    html+='<div class="brow"><button class="bback" onclick="step=2;renderWizard()">Atras</button><button class="bnext" onclick="if(storyStyle){step=4;renderWizard();}">Continuar</button></div>';
+    el.innerHTML=html; return;
+  }
+  if(step===4){
+    html+=dots(4)+'<p style="font-size:16px;font-weight:600;margin-bottom:4px">Que leccion?</p><p style="font-size:12px;color:#6b7280;margin-bottom:1rem">Un valor importante</p>';
+    html+='<textarea placeholder="Ej: Ser amable, compartir..." oninput="lesson=this.value">'+lesson+'</textarea>';
+    html+='<div class="brow" style="margin-top:1rem"><button class="bback" onclick="step=3;renderWizard()">Atras</button><button class="bnext" onclick="if(lesson.trim()){generateStory();}">Crear cuento</button></div>';
+    el.innerHTML=html; return;
+  }
+  if(step===5){
+    el.innerHTML='<div style="text-align:center;padding:3rem 1rem"><div class="spin"></div><p style="font-size:16px;font-weight:500;color:#6c47d9">Creando tu cuento...</p></div>';
+    return;
+  }
+  if(step===6){
+    el.innerHTML='<p style="font-size:20px;font-weight:700;margin-bottom:6px">Cuento creado!</p><p style="font-size:13px;color:#6b7280;margin-bottom:1.5rem">Guardado en tu biblioteca</p><button class="bnext" onclick="resetWizard()">Crear otro cuento</button>';
+    return;
+  }
+}
+
+function setLang(l){uiLang=l;interests=[];storyStyle="";renderWizard();}
+function toggleInterest(i){var idx=interests.indexOf(i);if(idx>=0)interests.splice(idx,1);else if(interests.length<3)interests.push(i);renderWizard();}
+function resetWizard(){step=0;age="";gender="";interests=[];storyStyle="";lesson="";renderWizard();}
+
+function generateStory(){
+  step=5; renderWizard();
+  var langName="Spanish";
+  for(var i=0;i<IDIOMAS.length;i++){if(IDIOMAS[i].c===uiLang){langName=IDIOMAS[i].l;break;}}
+  var prompt="Create a bedtime story in "+langName+" for a "+age+"-year-old "+gender+" who loves: "+interests.join(", ")+". Style: "+storyStyle+". Lesson: "+lesson+". 300-450 words, calming ending. Only the story text, no title.";
+  fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"},
+    body:JSON.stringify({model:"claude-opus-4-5",max_tokens:1024,messages:[{role:"user",content:prompt}]})
+  }).then(function(res){return res.json();}).then(function(data){
+    var text=(data.content&&data.content[0]&&data.content[0].text)||"Error al generar.";
+    return saveStory(text).then(function(){
+      step=6; renderWizard();
+      if(stories[0])showStory(stories[0].id);
+    });
+  }).catch(function(e){alert("Error: "+e.message);step=4;renderWizard();});
+}
+</script>
+</body>
+</html>
